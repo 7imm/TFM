@@ -19,7 +19,7 @@ conductivity in the presence of liquid water)
 
 The key concepts of the model are described in the thesis:
 
-**Schultz, T (2024)**.
+**Schultz, T. (2024)**.
 *"Physical Modeling of Firn: Densification, Temperature, Grain Growth, and Water
 Retention"*.
 Dissertation. TU Darmstadt. DOI:
@@ -106,6 +106,7 @@ The configuration file for TFM is  hardcoded and called `tfm.conf`. If you want
 to change this name, you can find it in [`app/main.f90`](app/main.f90) or you
 can create your own project with another name. For now, we stick with the
 example file.
+
 ```
 &CONFIG
   solve_density="arthern2010",
@@ -203,7 +204,7 @@ DOI: https://doi.org/10.1029/2019GL085228
 ---
 
 #### `solve_liquid_thermal_conductivity`
-While there are many parametrizations for the thermal conductivity of dry firn,
+fWhile there are many parametrizations for the thermal conductivity of dry firn,
 I'm not aware of any models for wet firn describing the thermal conductivity.
 Kaviany (1991, p. 126) suggests in his textbook to use either geometric mean
 weighting or a Voigt model. Hence, `"geometricmean"` and `"voigt"` are the two
