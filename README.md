@@ -375,7 +375,7 @@ It is a simple `txt` file representing a table with the following columns.
 
 |      | depth $z$    | density $\rho$          | temperature $T$ | grain radius $r$ | liquid water content $\theta$ | age $\chi$   |
 |------|--------------|-------------------------|-----------------|------------------|-------------------------------|--------------|
-| unit | $\mathrm{m}$ | $\mathrm{kg \, m^{-3}}$ | $\mathrm{K}$    | $\mathrm{m}$     | $\mathrm{1}$                  | $\mathrm{s}$ |
+| unit | $\mathrm{m}$ | $\mathrm{kg \ m^{-3}}$  | $\mathrm{K}$    | $\mathrm{m}$     | $\mathrm{1}$                  | $\mathrm{s}$ |
 
 The properties are self-explanatory. TFM usually uses SI units (with some
 exceptions like `max_profile_age`). This sometimes leads to great numbers, like
@@ -383,8 +383,8 @@ in the case of age, or small numbers, like in the case of accumulation rate.
 However, I decided to stick to SI units because I'm not a fan of derived units.
 
 The depth column accepts negative and position floating-point numbers. For
-example, a profile can start at ${z_\mathrm{bottom} = -25 \, \mathrm{m}}$ and
-end at ${z_\mathrm{top} = +25 \, \mathrm{m}}$. TFM, unlike other models, does
+example, a profile can start at ${z_\mathrm{bottom} = -25 \ \mathrm{m}}$ and
+end at ${z_\mathrm{top} = +25 \ \mathrm{m}}$. TFM, unlike other models, does
 not shift the top or bottom of the profile to a certain reference point.
 However, the reference point of the profile is always the bottom layer.
 
@@ -416,7 +416,7 @@ The columns store the following information:
 
 |      | world time $t_w$ | simulation time $t$ | surf. temperature $\mathrm{T_0}$ | surf. density $\rho_0$  | solid accumulation $\dot{b}_s$ | liquid accumulation $\dot{b}_l$ | surf. grain radius $r_0$ |
 |------|------------------|---------------------|----------------------------------|-------------------------|--------------------------------|---------------------------------|--------------------------|
-| unit | $\mathrm{s}$     | $\mathrm{s}$        | $\mathrm{K}$                     | $\mathrm{kg \, m^{-3}}$ | $\mathrm{m \, weq. \, s^{-1}}$ | $\mathrm{m \, weq. \, s^{-1}}$  | $\mathrm{m}$             |
+| unit | $\mathrm{s}$     | $\mathrm{s}$        | $\mathrm{K}$                     | $\mathrm{kg \ m^{-3}}$  | $\mathrm{m \ weq. \ s^{-1}}$   | $\mathrm{m \ weq. \ s^{-1}}$    | $\mathrm{m}$             |
 
 Each line of the table holds the information on one time step. TFM reads the
 forcing file and interprets the number of lines in the file as the number of
@@ -466,7 +466,7 @@ table with the following firn profile properties.
 
 |      | depth $z$    | density $\rho$          | temperature $T$ | grain radius $r$ | age $\chi$   | liquid water content $\theta$ |
 |------|--------------|-------------------------|-----------------|------------------|--------------|-------------------------------|
-| unit | $\mathrm{m}$ | $\mathrm{kg \, m^{-3}}$ | $\mathrm{K}$    | $\mathrm{m}$     | $\mathrm{s}$ | $1$                           |
+| unit | $\mathrm{m}$ | $\mathrm{kg \ m^{-3}}$  | $\mathrm{K}$    | $\mathrm{m}$     | $\mathrm{s}$ | $1$                           |
 
 Every line in the file represents a layer of the firn profile. Note that the
 number of layers varies from time step to time step. The length of the output
