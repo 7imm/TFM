@@ -285,8 +285,7 @@ The option `forcing_input_file` is a string defining where to find the forcing
 file for the simulation. In the example case, the forcing file is called
 `"example_forcing.dat"`. It can be found in
 [`example/example_forcing.dat`](example/example_forcing.dat). For information
-about how the file has to be formatted, see
-["The forcing file"](## The forcing file).
+about how the file has to be formatted, see "The forcing file".
 
 ---
 
@@ -295,7 +294,7 @@ Like `forcing_input_file`, `inital_input_file` defines where to find the file
 that defines the initial conditions of the simulated firn profile. In the
 example case, the initial input file is found at
 [`example/example_init.dat`](example/example_init.dat). For information about
-formatting the init file, see ["The init file"](## The init file)
+formatting the init file, see "The init file".
 
 ---
 
@@ -421,15 +420,14 @@ The columns store the following information:
 
 Each line of the table holds the information on one time step. TFM reads the
 forcing file and interprets the number of lines in the file as the number of
-time steps. Together with the time step, defined in the
-[configuration file](## The configuration file) the total simulation time
-follows.
+time steps. Together with the time step, defined in the configuration file the
+total simulation time follows.
 
 The first two columns, "world time" and "simulation time", are not used
 effectively by TFM. I implemented them because I thought it would be useful for
 certain simulations to match the real-world time to the simulation time.
-However, with the current [output routine](## Output) world time and simulation
-time are not written to output.
+However, with the current output routine world time and simulation time are not
+written to output.
 
 Surf. temperature, surf. density, and surf. grain radius are the prescribed
 temperature, density, and grain radius at the firn profile surface for each time

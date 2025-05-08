@@ -27,7 +27,7 @@ DOI: https://doi.org/10.3189/S0022143000015239
 
 #### `"li2003"`
 The firn densification model of Li & Zwally (2003) is another modification of
-the [Herron & Langway (1980) model](#### `"herron1980"`).
+the Herron & Langway (1980) model.
 
 **Li, J., Zwally, H. J., Corneja, H., and Yi, D. (2003)**.
 *Seasonal variation of snow surface elevation in North Greenland as modeled and
@@ -51,8 +51,7 @@ DOI: https://doi.org/10.1126/science.1153894
 
 #### `"arthern2010"`
 The firn densification model of Arthern et al. (2010) is especially tuned for
-Antarctica. It is based on the approach of
-[Herron & Langway (1980)](#### `"herron1980"`).
+Antarctica. It is based on the approach of Herron & Langway (1980).
 
 **Arthern, R. J., Vaughan, D. G., Rankin, A. M., Mulvaney, R., and Thomas, E. R.
 (2010)**.
@@ -65,7 +64,7 @@ DOI: https://doi.org/10.1029/2009JF001306
 
 #### `"ligtenberg2011"`
 The firn densification model of Ligtenberg et al. (2011), following the approach
-of [Herron & Langway (1980)](#### `"herron1980"`).
+of Herron & Langway (1980).
 
 **Ligtenberg, S. R. M., Helsen, M. M., and van den Broeke, M. R. (2011)**.
 *An improved semi-empirical model for the densification of Antarctic firn.*
@@ -76,7 +75,7 @@ DOI: https://doi.org/10.5194/tc-5-809-2011
 
 #### `"simsonsen2013`"
 The firn densification model of Simonsen et al. (2013), following the approach
-of [Herron & Langway (1980)](#### `"herron1980"`).
+of Herron & Langway (1980).
 
 **Simonsen, S. B. Stenseng, L., Adalgeisdottir, G., Fausto, R. S., Hvidberg, C.
 S., and Lucas-Picher, P. (2013)**.
@@ -89,9 +88,9 @@ DOI: https://doi.org/10.3189/2013JoG12J158
 
 #### `"medley2020"`
 The firn densification of Medley et al. (2020) is a tune of the model by
-[Herron & Langway (1980)](#### `"herron1980"`). Note that the implementation in
-TFM is based on the 2020 preprint of the paper. The final paper was published in
-the Cryosphere in 2022 and differs from the preprint in central aspects.
+Herron & Langway (1980). Note that the implementation in TFM is based on the
+2020 preprint of the paper. The final paper was published in the Cryosphere in
+2022 and differs from the preprint in central aspects.
 
 **Medley, B., Neumann, T. A., Zwally, H. J., and Smith, B. E. (2020)**.
 *Forty-year Simulations of Firn Processes over the Greenland and Atnarctic Ice
@@ -114,8 +113,8 @@ DOI: https://doi.org/10.1023/A:1005320713306
 
 
 #### `"breant2017"`
-Like the model of [Arthern & Wingham (1998)](#### `"arthern1998"`), the model of
-Breant et al. (2017) incorporates aspects of sintering theory.
+Like the model of Arthern & Wingham (1998), the model of Breant et al. (2017)
+incorporates aspects of sintering theory.
 
 **Breant, C., Martinerie, P., Orsi, A., Arnaud, L., and Landais, A. (2017)**.
 *Modelling firn thickness evolution during the last deglaciation: constraints on
@@ -127,7 +126,7 @@ DOI: https://doi.org/10.5194/cp-13-833-2017
 
 #### `"sintering"`
 The `"sintering"` model is an experimental process based model similar to that
-of [Arthern & Wingham (1998)](#### `"arthern1998"`).
+of Arthern & Wingham (1998).
 
 
 
@@ -146,8 +145,7 @@ DOI: https://doi.org/10.3189/S0260305500012246
 
 #### `"zwinger2007"`
 The firn densificaiton model of Zwinger et al. (2007) is based on the model of
-[Gagliardini & Meyssonnier (1998)](#### `"gagliardini1998"`). It differs from
-this model in certain aspects.
+Gagliardini & Meyssonnier (1998). It differs from this model in certain aspects.
 
 **Zwinger, T., Greve, R., Gagliardini, O., Shiraiwa, T.,
 and Lyly, M. A. (2007)**.
@@ -160,8 +158,7 @@ DOI: https://doi.org/10.3189/172756407782282543
 
 #### `"greve2009"`
 In their textbook Greve & Blatter (2009) again describe the model of
-[Gagliardini & Meyssonnier (1998)](#### `"gagliardini1998"`) with small
-modifications.
+Gagliardini & Meyssonnier (1998) with small modifications.
 
 **Greve, R. and Blatter, H. (2009)**.
 *Dynamics of Ice Sheets and Glaciers.*
@@ -169,73 +166,15 @@ Springer, Berlin.
 
 
 #### `"timmsfit`"
-Schultz (2024) extensively reviewed the model of
-[Gagliardini & Meyssonnier (1998)](#### `"gagliardini1998"`) and modified it for
-a greater dataset of firn measurements. A description of the model can be found
-in the thesis listed below.
+Schultz (2024) extensively reviewed the model of Gagliardini & Meyssonnier
+(1998) and modified it for a greater dataset of firn measurements. A description
+of the model can be found in the thesis listed below.
 
 **Schultz, T. (2024)**.
 *"Physical Modeling of Firn: Densification, Temperature, Grain Growth, and Water
 Retention"*.
 Dissertation. TU Darmstadt. DOI:
 https://doi.org/10.26083/tuprints-00027894.
-
----
-
-## `solve_thermal_conductivity`
-
-#### `"false"`
-
-#### `"sturm1997"`
-
-**Sturm, M., Holmgren, J., König, M., and Morris, K. (1997)**.
-*The thermal conductivity of seasonal snow.*
-Journal of Glaciology 43.143, pp. 26-41.
-DOI: https://doi.org/10.3189/S0022143000002781
-
-#### `"calonne2019"`
-
-**Calonne, N., Milliancourt, L., Burr, A., Philip, A., Martin, C. L., Flin, F.,
-and Geindreau, C. (2019)**.
-*Thermal Conductivity of Snow, Firn, and Porous Ice From 3-D Image-Based
-Computations.*
-Geophysical Research Letters 46.22, pp. 13079-13089.
-DOI: https://doi.org/10.1029/2019GL085228
-
-#### `"marchenko2019"`
-
-**Marchenko, S., Cheng, G., Lötstedt, P., Pohjola, V., Pettersson, R.,
-van Pelt, W., and Reijmer, C. (2019)**.
-*Thermal conductivity of firn at Lomonosovfonna, Svalbard, derived from
-subsurface temperature measurements.*
-The Cryosphere 13.7, pp. 1843-1859.
-DOI: https://doi.org/10.5194/tc-13-1843-2019
-
-#### `"miller1969upperbound"`
-
-**Miller, M. N. (1969)**.
-*Bounds for Effective Electrical, Thermal, and Magnetic Properties of
-Heterogeneous Materials.*
-Journal of Mathematical Physics 10.11, pp. 1988-2004.
-DOI: https://doi.org/10.1063/1.1664794
-
-#### `"miller1969lowerbound"`
-
-**Miller, M. N. (1969)**.
-*Bounds for Effective Electrical, Thermal, and Magnetic Properties of
-Heterogeneous Materials.*
-Journal of Mathematical Physics 10.11, pp. 1988-2004.
-DOI: https://doi.org/10.1063/1.1664794
-
-#### `"geometricmean"`
-
-see page 126 of
-
-**Kaviany, M. (1991)**.
-*Principles of Heat Transfer in Porous Media.*
-in: Ling, F. F. (edt.) Mechanical Engineering Series,
-Springer-Verlag, New York, Berlin, Heidelberg.
-DOI: https://doi.org/10.1063/1.1664794
 
 ---
 
@@ -289,8 +228,7 @@ ISBN 978-0-12-369461-4
 ## `solve_thermal_conductivity`
 The option `solve_thermal_conductivity` defines how the thermal conductivity of
 dry firn is computed. For the computation of the thermal conductivity of wet
-firn, see
-[`solve_liquid_thermal_conductivity`](## `solve_liquid_thermal_conductivity`).
+firn, see `solve_liquid_thermal_conductivity`.
 
 
 
@@ -373,7 +311,7 @@ either geometric mean weighting or a Voigt weighting model to compute the
 effective thermal conductivity of a three phase medium like wet firn, consisting
 of ice, air, and water.
 To do this, the thermal conductivity at water saturation has to be known, see
-[`solve_saturation_thermal_conductivity`](## `solve_saturation_thermal_conductivity`).
+`solve_saturation_thermal_conductivity`.
 
 **Kaviany, M. (1991)**.
 *Principles of Heat Transfer in Porous Media.*
@@ -406,10 +344,9 @@ firn at water saturation.
 
 The thermal conductivity of water saturated firn is needed to compute the
 effective thermal conductivity of firn at lower water saturation levels using
-mixture theory. Therefore, if
-[`solve_liquid_thermal_conductivity`](## `solve_liquid_thermal_conductivity`) is
-given, `solve_saturation_thermal_conductivity` must not be `"false"`. There is
-no certain method for computing the effective thermal conductivity of the two
+mixture theory. Therefore, if `solve_liquid_thermal_conductivity` is given,
+`solve_saturation_thermal_conductivity` must not be `"false"`. There is no
+certain method for computing the effective thermal conductivity of the two
 phase material consisting of ice and water. However, various mixture theory
 weighting approach are provided by TFM.
 
@@ -417,9 +354,8 @@ weighting approach are provided by TFM.
 
 #### `"false"`
 The option `"false"` can only be passed to
-`solve_saturation_thermal_conductivity` if
-[`solve_liquid_thermal_conductivity`](## `solve_liquid_thermal_conductivity`) is
-also `"false"`.
+`solve_saturation_thermal_conductivity` if `solve_liquid_thermal_conductivity`
+is also `"false"`.
 
 
 
@@ -494,7 +430,7 @@ not solved. Water infiltration is ignored.
 #### `"richardsequation"`
 Option to solve Richards Equation for unsaturated water flow through the firn
 column. If the option `"richardsequation"` is passed to `solve_liuqid`, the
-option [`solve_van_genuchten`](## `solve_van_genuchten`) cannot be `"false"`.
+option `solve_van_genuchten` cannot be `"false"`.
 
 
 
