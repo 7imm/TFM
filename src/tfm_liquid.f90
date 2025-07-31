@@ -34,7 +34,6 @@ MODULE tfm_liquid
     ACC_GRAVITY,            &
     ICE_DENSITY,            &
     LATENT_HEAT,            &
-    SPECIFIC_HEAT_ICE,      &
     MELT_TEMP
 
   !-----------------------------------------------------------------------------
@@ -50,6 +49,7 @@ MODULE tfm_liquid
     van_genuchten_inter,         &
     tfm_liquid_richardsequation, &
     tfm_liquid_bucket,           &
+    tfm_liquid_Freeze,           &
     vgParametersDaanen2009,      &
     vgParametersYamaguchi2010,   &
     vgParametersYamaguchi2012
@@ -1402,6 +1402,7 @@ MODULE tfm_liquid
   &  depth,                               &
   &  density,                             &
   &  temperature,                         &
+  &  heat_capacity,                       &
   &  grain_radius,                        &
   &  water_content,                       &
   &  liquid_accumulation,                 &
@@ -1415,6 +1416,9 @@ MODULE tfm_liquid
     REAL(dp), INTENT(IN) :: dt
     REAL(dp), DIMENSION(nz), INTENT(IN) :: &
       depth,                               &
+      density,                             &
+      temperature,                         &
+      heat_capacity,                       &
       grain_radius
 
     REAL(dp), INTENT(IN) :: liquid_accumulation
@@ -1422,22 +1426,14 @@ MODULE tfm_liquid
     PROCEDURE(van_genuchten_inter), POINTER :: van_genuchten_model
 
     REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
-      density,                                &
-      temperature,                            &
       water_content
 
     REAL(dp), intent(inout) :: runoff
 
-    REAL(dp), DIMENSION(nz) :: &
-      dz,                      &
-      water_mass,              &
-      refreeze_cap,            &
-      ice_cap,                 &
-      storage,                 &
-      d_temperature,           &
-      d_density
-
     !---------------------------------------------------------------------------
+
+    CALL tfm_essentials_do_nothing(nz, temperature)
+    CALL tfm_essentials_do_nothing(nz, heat_capacity)
 
     IF ( (liquid_accumulation > 0.0_dp) .OR. any(water_content > 0.0_dp) ) THEN
       water_content = vgRichardsAdvanceTimeStep(  &
@@ -1451,6 +1447,41 @@ MODULE tfm_liquid
       &  van_genuchten_model=van_genuchten_model  &
       )
     END IF
+  END SUBROUTINE tfm_liquid_RichardsEquation
+
+
+  SUBROUTINE tfm_liquid_Freeze( &
+  &  nz,                        &
+  &  depth,                     &
+  &  density,                   &
+  &  temperature,               &
+  &  heat_capacity,             &
+  &  water_content              &
+  )
+    IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+
+    INTEGER, INTENT(IN) :: nz
+
+    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+      depth,                               &
+      heat_capacity
+
+    REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+      density,                                &
+      temperature,                            &
+      water_content
+
+    REAL(dp), DIMENSION(nz) :: &
+      dz,                      &
+      water_mass,              &
+      refreeze_cap,            &
+      ice_cap,                 &
+      storage,                 &
+      d_temperature,           &
+      d_density
+
+    !---------------------------------------------------------------------------
 
     dz(1) = 1.0_dp
     dz(2:nz) = (depth(2:nz) - depth(1:nz-1))
@@ -1460,9 +1491,9 @@ MODULE tfm_liquid
     IF ( any(water_mass > 0.0_dp) ) THEN
 
       ! potential mass per square meter that might refreeze
-      refreeze_cap = (                                                  &
-      &  (SPECIFIC_HEAT_ICE * density * dz * (MELT_TEMP - temperature)) &
-      &  / (LATENT_HEAT)                                                &
+      refreeze_cap = (                                              &
+      &  (heat_capacity * density * dz * (MELT_TEMP - temperature)) &
+      &  / (LATENT_HEAT)                                            &
       )
 
       ! pore space in kg ice equivalent per square meter
@@ -1471,7 +1502,7 @@ MODULE tfm_liquid
       storage = min(refreeze_cap, ice_cap, water_mass)
 
       ! temperature change
-      d_temperature = (LATENT_HEAT / (SPECIFIC_HEAT_ICE * density * dz)) * storage
+      d_temperature = (LATENT_HEAT / (heat_capacity * density * dz)) * storage
       !d_temperature(1) = 0.0_dp
       temperature = (temperature + d_temperature)
 
@@ -1485,7 +1516,7 @@ MODULE tfm_liquid
         water_content = 0.0_dp
       END WHERE
     END IF
-  END SUBROUTINE tfm_liquid_RichardsEquation
+  END SUBROUTINE tfm_liquid_Freeze
 
 
   SUBROUTINE tfm_liquid_bucket( &
@@ -1494,6 +1525,7 @@ MODULE tfm_liquid
   &  depth,                     &
   &  density,                   &
   &  temperature,               &
+  &  heat_capacity,             &
   &  grain_radius,              &
   &  liquid_water,              &
   &  infiltration_rate,         &
@@ -1508,6 +1540,9 @@ MODULE tfm_liquid
 
     REAL(dp), DIMENSION(nz), INTENT(IN) :: &
       depth,                               &
+      density,                             &
+      temperature,                         &
+      heat_capacity,                       &
       grain_radius
 
     REAL(dp), INTENT(IN) :: infiltration_rate
@@ -1515,8 +1550,6 @@ MODULE tfm_liquid
     PROCEDURE(van_genuchten_inter), POINTER :: van_genuchten_model
 
     REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
-      density,                                &
-      temperature,                            &
       liquid_water
 
     REAL(dp), INTENT(INOUT) :: runoff
@@ -1544,9 +1577,9 @@ MODULE tfm_liquid
       dz = (depth(n+1) - depth(n))
 
       ! potential mass per square meter that might be frozen
-      refreeze_cap = (                                                        &
-      &  (SPECIFIC_HEAT_ICE * density(n) * dz * (MELT_TEMP - temperature(n))) &
-      &  / LATENT_HEAT                                                        &
+      refreeze_cap = (                                                       &
+      &  (heat_capacity(n) * density(n) * dz * (MELT_TEMP - temperature(n))) &
+      &  / LATENT_HEAT                                                       &
       )
 
       ! pore space in kg ice equivalent per square meter
@@ -1570,18 +1603,8 @@ MODULE tfm_liquid
         STOP
       END IF
 
-      ! temperature change due to refreezing
-      temperature(n) = (                                                   &
-      &  temperature(n)                                                    &
-      &  + (LATENT_HEAT / (SPECIFIC_HEAT_ICE * density(n) * dz)) * storage &
-      )
-
       ! remaining water
       water = water - storage
-
-      ! density change
-      density(n) = density(n) + (storage / dz)
-      IF ( density(n) >= IMP_DENSITY .OR. water <= 0.0_dp ) EXIT
 
       ! irreducable water content
       CALL tfm_liquid_Coleou1998(            &

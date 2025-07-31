@@ -42,7 +42,6 @@ MODULE tfm_constants
     WATER_DENSITY,                           &
     SECONDS_YEAR,                            &
     SECONDS_DAY,                             &
-    SPECIFIC_HEAT_ICE,                       &
     LATENT_HEAT,                             &
     MELT_TEMP,                               &
     BOLTZMANN,                               &
@@ -76,8 +75,6 @@ MODULE tfm_constants
     SECONDS_YEAR = (3600.0_dp * 24.0_dp * 365.0_dp), &
     ! seconds per day (s / d)
     SECONDS_DAY = (3600.0_dp * 24.0_dp), &
-    ! specific heat capacity of ice (J / kg K) Reijmer et al. 2012
-    SPECIFIC_HEAT_ICE = 2050.0_dp, &
     ! latent heat of ice (J / kg) Reijmer et al. 2012
     LATENT_HEAT = 334000.0_dp, &
     ! melt tempreature (K)

@@ -30,6 +30,7 @@ MODULE tfm_num
     van_genuchten_inter,         &
     tfm_liquid_bucket,           &
     tfm_liquid_RichardsEquation, &
+    tfm_liquid_Freeze,           &
     vgParametersDaanen2009,      &
     vgParametersYamaguchi2012,   &
     vgParametersYamaguchi2010
@@ -119,6 +120,7 @@ MODULE tfm_num
     &  depth,                &
     &  density,              &
     &  temperature,          &
+    &  heat_capacity,        &
     &  grain_radius,         &
     &  water_content,        &
     &  liquid_accumulation,  &
@@ -136,6 +138,9 @@ MODULE tfm_num
 
       REAL(dp), DIMENSION(nz), INTENT(IN) :: &
         depth,                               &
+        density,                             &
+        temperature,                         &
+        heat_capacity,                       &
         grain_radius
 
       REAL(dp), INTENT(IN) :: &
@@ -145,8 +150,6 @@ MODULE tfm_num
         van_genuchten_model
 
       REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
-        density,                                &
-        temperature,                            &
         water_content
 
       REAL(dp), INTENT(INOUT) :: &
@@ -693,11 +696,30 @@ MODULE tfm_num
       &  depth=depth,                                   &
       &  density=density,                               &
       &  temperature=temperature,                       &
+      &  heat_capacity=heat_capacity,                   &
       &  grain_radius=grain_radius,                     &
       &  water_content=liquidwater,                     &
       &  liquid_accumulation=liquid_acc,                &
       &  runoff=runoff,                                 &
       &  van_genuchten_model=models%van_genuchten_model &
+      )
+
+      IF ( associated(models%heatcap_model) ) THEN
+        n_heat_capacity = models%heatcap_model( &
+        &  nz,                                  &
+        &  n_density,                           &
+        &  n_temperature,                       &
+        &  n_liquidwater                        &
+        )
+      END IF
+
+      CALL tfm_liquid_Freeze(         &
+      &  nz=nz,                       &
+      &  depth=depth,                 &
+      &  density=density,             &
+      &  temperature=temperature,     &
+      &  heat_capacity=heat_capacity, &
+      &  water_content=liquidwater    &
       )
     END IF
 
