@@ -162,7 +162,7 @@ MODULE tfm_num
   INTERFACE
     FUNCTION density_inter( &
     &  nz,                  &
-    &  dz,                  &
+    &  dt,                  &
     &  depth,               &
     &  density,             &
     &  temperature,         &
@@ -176,7 +176,7 @@ MODULE tfm_num
         nz
 
       REAL(dp), INTENT(IN) :: &
-        dz
+        dt
 
       REAL(dp), DIMENSION(nz), INTENT(IN) :: &
         depth,                               &
@@ -706,10 +706,10 @@ MODULE tfm_num
 
       IF ( associated(models%heatcap_model) ) THEN
         n_heat_capacity = models%heatcap_model( &
-        &  nz,                                  &
-        &  n_density,                           &
-        &  n_temperature,                       &
-        &  n_liquidwater                        &
+        &  nz=nz,                               &
+        &  density=density,                     &
+        &  temperature=temperature,             &
+        &  liquid_water=liquidwater             &
         )
       END IF
 
@@ -745,7 +745,8 @@ MODULE tfm_num
       ! density model
       IF ( associated(models%dens_model) ) THEN
         d_density = models%dens_model( &
-        &  nz, dt,                     &
+        &  nz=nz,                      &
+        &  dt=dt,                      &
         &  depth=n_depth,              &
         &  density=n_density,          &
         &  temperature=n_temperature,  &
@@ -770,10 +771,10 @@ MODULE tfm_num
       ! heat capacity model
       IF ( associated(models%heatcap_model) ) THEN
         n_heat_capacity = models%heatcap_model( &
-        &  nz,                                  &
-        &  n_density,                           &
-        &  n_temperature,                       &
-        &  n_liquidwater                        &
+        &  nz=nz,                               &
+        &  density=n_density,                   &
+        &  temperature=n_temperature,           &
+        &  liquid_water=n_liquidwater           &
         )
         !residuum(2) = maxval(abs(n_heat_capacity - heatcap))
       END IF
@@ -785,18 +786,18 @@ MODULE tfm_num
         &  .AND. (associated(models%liquid_thermcond_model)) &
         ) THEN
           n_thermal_conductivity = models%liquid_thermcond_model( &
-          &  nz,                                                  &
-          &  n_density,                                           &
-          &  n_temperature,                                       &
-          &  n_liquidwater,                                       &
-          &  models%thermcond_model,                              &
-          &  models%sat_thermcond_model                           &
+          &  nz=nz,                                               &
+          &  density=n_density,                                   &
+          &  temperature=n_temperature,                           &
+          &  liquid_water=n_liquidwater,                          &
+          &  thermcond_model=models%thermcond_model,              &
+          &  sat_thermcond_model=models%sat_thermcond_model       &
           )
         ELSE
           n_thermal_conductivity = models%thermcond_model( &
-          &  nz,                                           &
-          &  n_density,                                    &
-          &  n_temperature                                 &
+          &  nz=nz,                                        &
+          &  density=n_density,                            &
+          &  temperature=n_temperature                     &
           )
         END IF
         !residuum(3) = maxval(abs(n_thermal_conductivity - thermcond))
@@ -805,7 +806,8 @@ MODULE tfm_num
       ! temperature model
       IF ( associated(models%temp_model) ) THEN
         d_temperature = models%temp_model(             &
-        &  nz, dt,                                     &
+        &  nz=nz,                                      &
+        &  dt=dt,                                      &
         &  depth=n_depth,                              &
         &  density=n_density,                          &
         &  temperature=temperature,                    &
@@ -820,7 +822,8 @@ MODULE tfm_num
       ! grain growth model
       IF ( associated(models%grain_model) ) THEN
         d_grain_radius = models%grain_model( &
-        &  nz, dt,                           &
+        &  nz=nz,                            &
+        &  dt=dt,                            &
         &  temperature=n_temperature,        &
         &  density=n_density,                &
         &  liquid_water=n_liquidwater,       &
@@ -833,7 +836,7 @@ MODULE tfm_num
 
       ! depth evolution
       d_depth = tfm_density_depth( &
-      &  nz,                       &
+      &  nz=nz,                    &
       &  depth=depth,              &
       &  density=density,          &
       &  d_density=d_density       &
