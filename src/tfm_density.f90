@@ -2108,14 +2108,30 @@ MODULE tfm_density
       age,                                 &
       grain_radius
 
-    INTEGER :: n
-    REAL(dp) :: rel_density
     REAL(dp), DIMENSION(nz) :: &
       d_density,               &
-      param_a,                 &
-      param_b,                 &
+      stress,                  &
+      strain_rate,             &
+      eff_sr,                  &
       rate_factor,             &
-      stress
+      rel_density,             &
+      m_density,               &
+      n_density,               &
+      a_param,                 &
+      b_param 
+
+    REAL(dp), PARAMETER :: &
+      A_LOW = 3.985D-13,   &
+      Q_LOW = 60000.0_dp,  &
+      A_HIGH = 1.961D3,    &
+      Q_HIGH = 139000.0_dp
+
+    REAL(dp), DIMENSION(nz) :: &
+      a_rf,                    &
+      q_rf
+
+    REAL(dp) :: residuum
+    INTEGER :: iter
 
     !---------------------------------------------------------------------------
 
@@ -2123,127 +2139,105 @@ MODULE tfm_density
     CALL tfm_essentials_do_nothing(nz, age)
     CALL tfm_essentials_do_nothing(nz, grain_radius)
 
-    ! stress
-    CALL tfm_density_computeStress( &
-    &  nz=nz,                       &
-    &  depth=depth,                 &
-    &  density=density,             &
-    &  stress=stress                &
+    ! temperature dependent associated rate factor
+    a_rf = -999999999.9_dp
+    q_rf = -999999999.9_dp
+    
+    WHERE ( temperature <= 263.15_dp )
+      a_rf = A_LOW
+      q_rf = Q_LOW
+    END WHERE
+
+    WHERE ( temperature > 263.15_dp )
+      a_rf = A_HIGH
+      q_rf = Q_HIGH
+    END WHERE
+
+    rate_factor = a_rf * exp(-q_rf / (temperature * GAS_CONST))
+    rate_factor = (                            &
+    &  (2.0_dp / 3.0_dp)                       &
+    &  * (3.0_dp**((1.0_dp - ICE_N) / 2.0_dp)) &
+    &  * rate_factor                           &
     )
 
-    ! density dependent parameter of the model as defined by Greve & BLatter 2009
-    DO n = 1, nz, 1
-      rel_density = density(n) / ICE_DENSITY
+    ! initial values
+    strain_rate = 1.0D-10
+    n_density = density
+    m_density = density
+    residuum = 999999999.9_dp
+    iter = 0
 
-      IF ( (rel_density > 0.0_dp) .AND. (rel_density <= 0.79_dp) ) THEN
-        param_a(n) = exp(                       &
-        &  24.60215_dp                          &
-        &  - (58.573530_dp * rel_density)       &
-        &  - (-35.5_dp * (rel_density**2.0_dp)) &
-        )
-        param_b(n) = (                                    &
-        &  (                                              &
-        &    tfm_density_gagliardiniParamB0(density(n))   &
-        &    / tfm_density_gagliardiniParamA0(density(n)) &
-        &  ) * param_a(n)                                 &
-        )
+    DO WHILE ( residuum > 1.0D-6 )
 
-      ELSE IF ( (rel_density > 0.79_dp) .AND. (rel_density < 1.0_dp) ) THEN
-        param_a(n) = tfm_density_gagliardiniParamA0(density(n))
-        param_b(n) = tfm_density_gagliardiniParamB0(density(n))
+      ! stress
+      CALL tfm_density_computeStress( &
+      &  nz=nz,                       &
+      &  depth=depth,                 &
+      &  density=n_density,           &
+      &  stress=stress                &
+      )
 
-      ELSE
-        ! catch exception
-        PRINT *, 'module: tfm_density'
-        PRINT *, 'function: tfm_density_timmsfit'
-        PRINT *, ''
-        PRINT *, 'It seems the density exceeds the range of valid '
-        PRINT *, 'values at some point!'
-        PRINT *, ''
-        PRINT *, 'Stopping right here!'
+      ! relative density
+      rel_density = (n_density / ICE_DENSITY)
+
+      ! parameter a(rho)
+      a_param = (10.0_dp**(                    &
+      &  + (-12.60_dp * (rel_density**3.0_dp)) &
+      &  + (+38.26_dp * (rel_density**2.0_dp)) &
+      &  + (-38.06_dp * (rel_density**1.0_dp)) &
+      &  + (+12.66_dp)                         &
+      ))
+
+      ! parameter b(rho)
+      b_param = (10.0_dp**(                                &
+      &  + (-142.96_dp * ((rel_density**4.0_dp) - 1.0_dp)) &
+      &  + (+374.45_dp * ((rel_density**3.0_dp) - 1.0_dp)) &
+      &  + (-351.10_dp * ((rel_density**2.0_dp) - 1.0_dp)) &
+      &  + (+131.26_dp * ((rel_density**1.0_dp) - 1.0_dp)) &
+      &  + (-2.0_dp)                                       &
+      ))
+
+      ! effective strain rate
+      eff_sr = (((strain_rate**2.0_dp) * ( &
+      &  + (4.0_dp / (9.0_dp * a_param))   &
+      &  + (1.0_dp / b_param)              &
+      ))**0.5_dp)
+
+      ! strain rate
+      strain_rate = (                         &
+      &  2.0_dp                               &
+      &  * (rate_factor**(1.0_dp / ICE_N))    &
+      &  * eff_sr**((ICE_N - 1.0_dp) / ICE_N) &
+      &  * ((                                 &
+      &    + (8.0_dp / (9.0_dp * a_param))    &
+      &    + (2.0_dp / b_param)               &
+      &  )**(-1.0_dp))                        &
+      &  * (-stress)                          &
+      )
+
+      ! new density, density change
+      m_density = (density / (1.0_dp + (strain_rate * dt)))
+      residuum = maxval(m_density - n_density)
+      n_density = m_density
+      iter = (iter + 1)
+
+      IF ( iter == 100 ) THEN
+        PRINT *, ""
+        PRINT *, "**************************************************"
+        PRINT *, "* Module: tfm_density                            *"
+        PRINT *, "* Function: tfm_density_timmsfit                 *"
+        PRINT *, "*                                                *" 
+        PRINT *, "* The system is not converging within a          *" 
+        PRINT *, "* reasonable number of iterations!               *" 
+        PRINT *, "*                                                *" 
+        PRINT *, "* Stopping right here!i                          *" 
+        PRINT *, "**************************************************"
         STOP
       END IF
     END DO
 
-    ! temperature dependent associated rate factor
-    rate_factor = tfm_density_gagliardiniRate( &
-    &  nz=nz,                                  &
-    &  temperature=temperature                 &
-    )
-
-    ! solving for the density change
-    d_density = tfm_density_gagliardiniSolve( &
-    &  nz=nz,                                 &
-    &  density=density,                       &
-    &  stress=stress,                         &
-    &  dt=dt,                                 &
-    &  param_a=param_a,                       &
-    &  param_b=param_b,                       &
-    &  rate_factor=rate_factor,               &
-    &  invariant_func=invariant_func,         &
-    &  shear_visco_func=visco_func,           &
-    &  bulk_visco_func=visco_func             &
-    )
-
-    CONTAINS
-
-    FUNCTION invariant_func( &
-    &  nz,                   &
-    &  param_a,              &
-    &  param_b,              &
-    &  strain_rate_inp       &
-    ) RESULT(invariant)
-      IMPLICIT NONE (TYPE, EXTERNAL)
-
-      INTEGER, INTENT(IN)                 :: nz
-
-      REAL(dp), DIMENSION(nz), INTENT(IN) :: &
-        param_a,                             &
-        param_b
-
-      real(dp), dimension(nz), intent(in), optional :: &
-        strain_rate_inp
-
-      REAL(dp), DIMENSION(nz) :: &
-        invariant,               &
-        strain_rate
-
-      IF ( present(strain_rate_inp) ) THEN
-        strain_rate = strain_rate_inp
-      ELSE
-        strain_rate = 1.0e-10_dp
-      END IF
-
-      invariant = (                                                     &
-      &  strain_rate                                                    &
-      &  * ((                                                           &
-      &    (1.0_dp / (3.0_dp * param_a)) + (1.0_dp / (4.0_dp * param_b) &
-      &  ))**0.5_dp)                                                    &
-      )
-    END FUNCTION invariant_func
-
-
-    FUNCTION visco_func( &
-    &  nz,               &
-    &  param,            &
-    &  rate_factor,      &
-    &  invariant         &
-    ) RESULT(viscosity)
-
-      INTEGER, INTENT(IN)                 :: nz
-      REAL(dp), DIMENSION(nz), INTENT(IN) :: &
-        param,                               &
-        rate_factor,                         &
-        invariant
-
-      REAL(dp), DIMENSION(nz) :: viscosity
-
-      viscosity = (                                    &
-      &  (1.0_dp / (2.0 * param))                      &
-      &  * rate_factor                                 &
-      &  * (invariant**(-(1.0_dp - (1.0_dp / ICE_N)))) &
-      )
-    END FUNCTION visco_func
+    ! output -> density change
+    d_density = (m_density - density)
   END FUNCTION tfm_density_timmsfit
 
 
