@@ -2230,7 +2230,7 @@ MODULE tfm_density
         PRINT *, "* The system is not converging within a          *" 
         PRINT *, "* reasonable number of iterations!               *" 
         PRINT *, "*                                                *" 
-        PRINT *, "* Stopping right here!i                          *" 
+        PRINT *, "* Stopping right here!                           *" 
         PRINT *, "**************************************************"
         STOP
       END IF
@@ -2238,6 +2238,11 @@ MODULE tfm_density
 
     ! output -> density change
     d_density = (m_density - density)
+
+    ! avopid densification beyond ice density
+    WHERE ( (density + d_density) > ICE_DENSITY )
+      d_density = (ICE_DENSITY - density)
+    END WHERE
   END FUNCTION tfm_density_timmsfit
 
 
