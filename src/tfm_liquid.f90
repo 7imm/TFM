@@ -559,6 +559,7 @@ MODULE tfm_liquid
   FUNCTION vgRelativeHydraulicCond( &
   &  nz,                            &
   &  head,                          &
+  &  density,                       &
   &  vg_params                      &
   ) RESULT(rel_hydraulic_cond)
     IMPLICIT NONE (TYPE, EXTERNAL)
@@ -566,6 +567,7 @@ MODULE tfm_liquid
 
     INTEGER, INTENT(IN)                      :: nz
     REAL(dp), DIMENSION(nz), INTENT(IN)      :: head
+    REAL(dp), DIMENSION(nz), INTENT(IN)      :: density
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
     REAL(dp), DIMENSION(nz)                  :: rel_hydraulic_cond
 
@@ -588,6 +590,11 @@ MODULE tfm_liquid
 
     WHERE ( head >= 0.0_dp )
       rel_hydraulic_cond = 1.0_dp
+    END WHERE
+
+    ! set relative hydraulic condictvitiy to zero at dense layers
+    WHERE ( (ICE_DENSITY - density) <= 1.0_dp )
+      rel_hydraulic_cond = 0.0_dp
     END WHERE
   END FUNCTION vgRelativeHydraulicCond
 
@@ -743,6 +750,7 @@ MODULE tfm_liquid
   &  saturation_wc,            &
   &  residual_wc,              &
   &  saturation_cond,          &
+  &  density,                  &
   &  vg_params,                &
   &  dt,                       &
   &  truncerr_tolerance,       &
@@ -762,7 +770,8 @@ MODULE tfm_liquid
       water_content,                          &
       saturation_wc,                          &
       residual_wc,                            &
-      saturation_cond
+      saturation_cond,                        &
+      density
 
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
     REAL(dp), INTENT(IN)                     :: dt
@@ -809,9 +818,9 @@ MODULE tfm_liquid
     &  vg_params=vg_params          &
     )
 
-    hydraulic_cond = (                                &
-    &  saturation_cond                                &
-    &  * vgRelativeHydraulicCond(nz, head, vg_params) &
+    hydraulic_cond = (                                         &
+    &  saturation_cond                                         &
+    &  * vgRelativeHydraulicCond(nz, head, density, vg_params) &
     )
 
     specific_cap = vgSpecificMoistureCapNum( &
@@ -1228,7 +1237,7 @@ MODULE tfm_liquid
     !---------------------------------------------------------------------------
 
     eff_saturation = 1.0E-3_dp
-    saturation_wc = 0.9_dp * (1.0_dp - (density / ICE_DENSITY))
+    saturation_wc = 0.9_dp * (1.0_dp - (density / ICE_DENSITY)) + 1.0D-6
 
     WHERE ( water_content == 0.0_dp )
       dry_layers = (                                             &
@@ -1285,6 +1294,7 @@ MODULE tfm_liquid
     &  saturation_wc=saturation_wc,       &
     &  residual_wc=residual_wc,           &
     &  saturation_cond=saturation_cond,   &
+    &  density=density,                   &
     &  vg_params=vg_params,               &
     &  dt=dt,                             &
     &  truncerr_tolerance=step_tolerance, &
@@ -1309,6 +1319,7 @@ MODULE tfm_liquid
         rel_hydraulic_cond = vgRelativeHydraulicCond( &
         &  nz=nz,                                     &
         &  head=head,                                 &
+        &  density=density,                           &
         &  vg_params=vg_params                        &
         )
         hydraulic_cond = (rel_hydraulic_cond * saturation_cond)
