@@ -593,7 +593,7 @@ MODULE tfm_liquid
     END WHERE
 
     ! set relative hydraulic condictvitiy to zero at dense layers
-    WHERE ( (ICE_DENSITY - density) <= 1.0_dp )
+    WHERE ( (ICE_DENSITY - density) <= 3.0_dp )
       rel_hydraulic_cond = 0.0_dp
     END WHERE
   END FUNCTION vgRelativeHydraulicCond
@@ -1237,7 +1237,7 @@ MODULE tfm_liquid
     !---------------------------------------------------------------------------
 
     eff_saturation = 1.0E-3_dp
-    saturation_wc = 0.9_dp * (1.0_dp - (density / ICE_DENSITY)) + 1.0D-6
+    saturation_wc = 0.9_dp * (1.0_dp - (density / ICE_DENSITY)) + 1.0D-3
 
     WHERE ( water_content == 0.0_dp )
       dry_layers = (                                             &
