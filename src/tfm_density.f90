@@ -1612,7 +1612,7 @@ MODULE tfm_density_gagliardini
   &  shear_visco_func,                   &
   &  bulk_visco_func                     &
   ) RESULT(d_density)
-    IMPLICIT NONE (TYPE, EXTERNAL)
+    IMPLICIT NONE (TYPE)
     !---------------------------------------------------------------------------
     ! Function tfm_density_gagliardiniSolve
     !

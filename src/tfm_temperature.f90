@@ -1526,7 +1526,7 @@ MODULE tfm_temperature
   &  dry_thermcond_model,                        &
   &  sat_thermcond_model                         &
   ) RESULT(n_thermal_conductivity)
-    IMPLICIT NONE (TYPE, EXTERNAL)
+    IMPLICIT NONE (TYPE)
     !---------------------------------------------------------------------------
     ! Function: tfm_temperature_liquid_cond_geomMean
     !
@@ -1592,7 +1592,7 @@ MODULE tfm_temperature
   &  dry_thermcond_model,                     &
   &  sat_thermcond_model                      &
   ) RESULT(n_thermal_conductivity)
-    IMPLICIT NONE (TYPE, EXTERNAL)
+    IMPLICIT NONE (TYPE)
     !---------------------------------------------------------------------------
     ! Function: tfm_temperature_liquid_cond_Voigt
     !
