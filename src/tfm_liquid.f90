@@ -140,7 +140,7 @@ MODULE tfm_liquid
     !---------------------------------------------------------------------------
     ! Subroutine: vgParametersYamaguchi2012
     !
-    ! van Geuchten parameters for snow according to Yamaguchi et al. 2012.
+    ! van Genuchten parameters for snow according to Yamaguchi et al. 2012.
     !
     ! Yamaguchi, S., Watanabe, K., Katsushima, T., Sato, A., and Kumakura
     ! (2012). Dependence of the water retention curve of snow on snow
@@ -328,11 +328,69 @@ MODULE tfm_liquid
   END FUNCTION vgDryLayers
 
 
+  FUNCTION vgEffectiveWC( &
+  &  nz,                  &
+  &  water_content,       &
+  &  residual_wc,         &
+  &  saturation_wc        &
+  ) RESULT(effective_wc)
+    IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Function: vgEffectiveWC
+    !
+    ! Effective water content, determined by the volumetric water content, the
+    ! residual water content, and the water content at saturation.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "density" and "grain_radius".
+    !   water_conntent: Volumetric water content (1).
+    !   residual_wc: Residual water content (1).
+    !   saturation_wc: Water content at saturation (1).
+    !
+    ! Result:
+    !  effective_wc: Effective water content (1).
+    !---------------------------------------------------------------------------
+
+    INTEGER, INTENT(IN) :: nz
+
+    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+      water_content,                       &
+      residual_wc,                         &
+      saturation_wc
+    
+    REAL(dp), DIMENSION(nz) :: effective_wc
+
+    REAL(dp), PARAMETER :: EPS = 1.0D-10
+
+    !---------------------------------------------------------------------------
+
+    effective_wc = (                         &
+    &  (water_content - residual_wc + EPS)   &
+    &  / (saturation_wc - residual_wc + EPS) &
+    )
+  END FUNCTION vgEffectiveWC
+
+
   FUNCTION vgSaturationWC( &
   &  nz,                   &
   &  density               &
   ) RESULT(saturation_wc)
     IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Function: vgSaturationWC
+    !
+    ! Water content at saturation based on the density.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "density" and "grain_radius".
+    !   density: Firn density (kg m**-3).
+    !
+    ! Result:
+    !  saturation_wc: Water content at saturation (1)
     !---------------------------------------------------------------------------
 
     INTEGER, INTENT(IN)                 :: nz
@@ -558,93 +616,94 @@ MODULE tfm_liquid
 
   FUNCTION vgRelativeHydraulicCond( &
   &  nz,                            &
-  &  head,                          &
-  &  density,                       &
+  &  effective_wc,                  &
   &  vg_params                      &
   ) RESULT(rel_hydraulic_cond)
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
+    ! Function vgRelativeHydraulicCond
+    !
+    ! Relative hydraulic conductivity following the van Genuchten model.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "water_content" and "residual_wc".
+    !   effective_wc: Effective water content (1).
+    !   vg_params: van Genuchten parameters.
+    !
+    ! Result:
+    !   rel_hydraulic_cond: Relative hydraulic conductivity (1).
+    !---------------------------------------------------------------------------
 
     INTEGER, INTENT(IN)                      :: nz
-    REAL(dp), DIMENSION(nz), INTENT(IN)      :: head
-    REAL(dp), DIMENSION(nz), INTENT(IN)      :: density
+    REAL(dp), DIMENSION(nz), INTENT(IN)      :: effective_wc
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
     REAL(dp), DIMENSION(nz)                  :: rel_hydraulic_cond
 
     !---------------------------------------------------------------------------
 
-    rel_hydraulic_cond = (                                           &
-    &  ((                                                            &
-    &    1.0_dp                                                      &
-    &    - (                                                         &
-    &      ((vg_params%alpha * abs(head))**(vg_params%n - 1.0_dp))   &
-    &      * ((                                                      &
-    &        1.0_dp + ((vg_params%alpha * abs(head))**(vg_params%n)) &
-    &      )**(-vg_params%m))                                        &
-    &    )                                                           &
-    &  )**2.0_dp)                                                    &
-    &  / ((                                                          &
-    &    1.0_dp + ((vg_params%alpha * abs(head))**(vg_params%n))     &
-    &  )**(vg_params%m / 2.0_dp))                                    &
+    rel_hydraulic_cond = (                                 &
+    &  sqrt(effective_wc)                                  &
+    &  * ((                                                &
+    &    1.0_dp                                            &
+    &    - ((                                              &
+    &      1.0_dp - (effective_wc**(1.0_dp / vg_params%m)) &
+    &    )**vg_params%m)                                   &
+    &  )**2.0_dp)                                          &
     )
-
-    WHERE ( head >= 0.0_dp )
-      rel_hydraulic_cond = 1.0_dp
-    END WHERE
-
-    ! set relative hydraulic condictvitiy to zero at dense layers
-    WHERE ( (ICE_DENSITY - density) <= 3.0_dp )
-      rel_hydraulic_cond = 0.0_dp
-    END WHERE
   END FUNCTION vgRelativeHydraulicCond
 
 
-  FUNCTION vgSpecificMoistureCapNum( &
-  &  nz,                             &
-  &  head,                           &
-  &  residual_wc,                    &
-  &  saturation_wc,                  &
-  &  vg_params                       &
+  FUNCTION vgSpecificMoistureCap( &
+  &  nz,                          &
+  &  effective_wc,                &
+  &  residual_wc,                 &
+  &  saturation_wc,               &
+  &  vg_params                    &
   ) RESULT(specific_cap)
     IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Function vgSpecificMoistureCap
+    !
+    ! Analytical solution of the specific moisture capaccity C = dtheta/dh
+    ! based on the effective water content.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "water_content" and "residual_wc".
+    !   effective_wc: Effective water content (1).
+    !   residual_wc: Residual water content (1).
+    !   saturation_wc: Water content at saturation (1).
+    !   vg_params: van Genuchten parameters.
+    !
+    ! Result:
+    !   specific_cap: Specific moisture capacity.
     !---------------------------------------------------------------------------
 
     INTEGER, INTENT(IN) :: nz
 
-    REAL(dp), DIMENSION(nz), intent(in)    :: &
-      head,                                   &
-      residual_wc,                            &
+    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+      effective_wc,                        &
+      residual_wc,                         &
       saturation_wc
 
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
 
-    REAL(dp), DIMENSION(nz) :: &
-      specific_cap,            &
-      cplus,                   &
-      cminus
-
-    REAL(dp), PARAMETER :: DHEAD = 1.0E-4_dp
+    REAL(dp), DIMENSION(nz) :: specific_cap
 
     !---------------------------------------------------------------------------
 
-    cplus = (                                                          &
-    &  (saturation_wc - residual_wc)                                   &
-    &  / ((                                                            &
-    &    1.0_dp + ((vg_params%alpha * abs(head + DHEAD))**vg_params%n) &
-    &  )**vg_params%m)                                                 &
+    specific_cap = (                                            &
+    &  (vg_params%n * vg_params%m * vg_params%alpha)            & 
+    &  * (saturation_wc - residual_wc)                          &
+    &  * ((                                                     &
+    &    (effective_wc**(-1.0_dp / vg_params%m)) - 1.0_dp       &
+    &  )**((vg_params%n - 1.0_dp) / vg_params%n))               &
+    &  * (effective_wc**((vg_params%m + 1.0_dp) / vg_params%m)) &
     )
-    cminus = (                                                         &
-    &  (saturation_wc - residual_wc)                                   &
-    &  / ((                                                            &
-    &    1.0_dp + ((vg_params%alpha * abs(head - DHEAD))**vg_params%n) &
-    &  )**vg_params%m)                                                 &
-    )
-    specific_cap = ((cplus - cminus) / (2.0_dp * DHEAD))
-
-    WHERE ( head >= 0.0_dp )
-      specific_cap = 1.0_dp
-    END WHERE
-  END FUNCTION vgSpecificMoistureCapNum
+  END FUNCTION vgSpecificMoistureCap
 
 
   FUNCTION vgWaterContent( &
@@ -655,6 +714,23 @@ MODULE tfm_liquid
   &  vg_params             &
   ) RESULT(n_water_content)
     IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Function vgWaterContent
+    !
+    ! Volumetric water content as a function of the head based on the van
+    ! Genuchten model.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "water_content" and "residual_wc".
+    !   head: Pressure head (m).
+    !   saturation_wc: Water content at saturation (1).
+    !   residual_wc: Residual water content (1).
+    !   vg_params: van Genuchten parameters.
+    !
+    ! Result:
+    !   n_water_content: Volumetric water content (1).
     !---------------------------------------------------------------------------
 
     INTEGER, INTENT(IN) :: nz
@@ -678,43 +754,45 @@ MODULE tfm_liquid
     &    )**vg_params%m)                                         &
     &  )                                                         &
     )
-
-    WHERE ( head >= 0.0_dp )
-      n_water_content = saturation_wc
-    END WHERE
   END FUNCTION vgWaterContent
 
 
   FUNCTION vgHead(  &
   &  nz,            &
-  &  water_content, &
-  &  saturation_wc, &
-  &  residual_wc,   &
+  &  effective_wc,  &
   &  vg_params      &
   ) RESULT(head)
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
+    ! Function vgHead
+    !
+    ! Pressure head as a function of the volumetric water content follwoing the
+    ! van Genuchten model.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "water_content" and "residual_wc".
+    !   effective_wc: Effective water content (1).
+    !   vg_params: van Genuchten parameters.
+    !
+    ! Result:
+    !   head: Pressure head (m).
+    !---------------------------------------------------------------------------
 
-    INTEGER, INTENT(IN) :: nz
-
-    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
-      water_content,                       &
-      saturation_wc,                       &
-      residual_wc
-
+    INTEGER, INTENT(IN)                      :: nz
+    REAL(dp), DIMENSION(nz), INTENT(IN)      :: effective_wc
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
-    REAL(dp), DIMENSION(nz) :: head
+    REAL(dp), DIMENSION(nz)                  :: head
 
     !---------------------------------------------------------------------------
 
-    head = (                                 &
-    &  -(1.0_dp / vg_params%alpha)           &
-    &  * ((                                  &
-    &    ((                                  &
-    &      (saturation_wc - residual_wc)     &
-    &      / (water_content - residual_wc)   &
-    &    )**(1.0_dp / vg_params%m)) - 1.0_dp &
-    &  )**(1.0_dp / vg_params%n))            &
+    head = (                                     &
+    &  (-1.0_dp / vg_params%alpha)               &
+    &  * ((                                      &
+    &    (effective_wc**(-1.0_dp / vg_params%m)) &
+    &    - 1.0_dp                                &
+    &  )**(1.0_dp / vg_params%n))                &
     )
   END FUNCTION vgHead
 
@@ -750,7 +828,6 @@ MODULE tfm_liquid
   &  saturation_wc,            &
   &  residual_wc,              &
   &  saturation_cond,          &
-  &  density,                  &
   &  vg_params,                &
   &  dt,                       &
   &  truncerr_tolerance,       &
@@ -770,8 +847,7 @@ MODULE tfm_liquid
       water_content,                          &
       saturation_wc,                          &
       residual_wc,                            &
-      saturation_cond,                        &
-      density
+      saturation_cond
 
     TYPE(vanGenuchtenParameters), INTENT(IN) :: vg_params
     REAL(dp), INTENT(IN)                     :: dt
@@ -789,7 +865,9 @@ MODULE tfm_liquid
     REAL(dp), INTENT(INOUT) :: local_dt
 
     REAL(dp), DIMENSION(nz) :: &
+      effective_wc,            &
       specific_cap,            &
+      rel_hydraulic_cond,      &
       hydraulic_cond
 
     REAL(dp) :: &
@@ -810,36 +888,43 @@ MODULE tfm_liquid
       eps = 1.0E-10_dp
     END IF
 
-    head = vgHead(                  &
-    &  nz=nz,                       &
+    effective_wc = vgEffectiveWC(     &
+    &  nz=nz,                         &
     &  water_content=water_content, &
-    &  saturation_wc=saturation_wc, &
-    &  residual_wc=residual_wc,     &
-    &  vg_params=vg_params          &
+    &  residual_wc=residual_wc,       &
+    &  saturation_wc=saturation_wc    &
     )
 
-    hydraulic_cond = (                                         &
-    &  saturation_cond                                         &
-    &  * vgRelativeHydraulicCond(nz, head, density, vg_params) &
+    head = vgHead(                &
+    &  nz=nz,                     &
+    &  effective_wc=effective_wc, &
+    &  vg_params=vg_params        &
     )
 
-    specific_cap = vgSpecificMoistureCapNum( &
-    &  nz=nz,                                &
-    &  head=head,                            &
-    &  residual_wc=residual_wc,              &
-    &  saturation_wc=saturation_wc,          &
-    &  vg_params=vg_params                   &
+    rel_hydraulic_cond = vgRelativeHydraulicCond( &
+    &  nz=nz,                                     &
+    &  effective_wc=effective_wc,                 &
+    &  vg_params=vg_params                        &
+    )
+    hydraulic_cond = (saturation_cond * rel_hydraulic_cond)
+  
+    specific_cap = vgSpecificMoistureCap( &
+    &  nz=nz,                             &
+    &  effective_wc=effective_wc,         &
+    &  residual_wc=residual_wc,           &
+    &  saturation_wc=saturation_wc,       &
+    &  vg_params=vg_params                &
     )
 
     dhdt = ((-hydraulic_cond * head) / specific_cap)
     dwcdt = (specific_cap * dhdt)
 
-    local_dt = minval(safety * (                       &
-    &  (                                               &
-    &    ((truncerr_tolerance(2)**0.5_dp) * abs(head)) &
-    &    + (truncerr_tolerance(1)**0.5_dp)             &
-    &  )                                               &
-    &  /(max(abs(dhdt), eps))                          &
+    local_dt = minval(safety * (                   &
+    &  (                                           &
+    &    (sqrt(truncerr_tolerance(2)) * abs(head)) &
+    &    + sqrt(truncerr_tolerance(1))             &
+    &  )                                           &
+    &  /(max(abs(dhdt), eps))                      &
     ))
     local_dt = min(dt, local_dt)
   END SUBROUTINE initKavetski2001
@@ -1022,7 +1107,9 @@ MODULE tfm_liquid
       am,                      &
       au,                      &
       al,                      &
-      b
+      b,                       &
+      tdma_c,                  &
+      tdma_d
 
     INTEGER  :: m
     REAL(dp) :: &
@@ -1161,16 +1248,24 @@ MODULE tfm_liquid
     END IF
 
     ! TDMA
-    DO m = 2, nz, 1
-      w = al(m) / am(m-1)
-      am(m) = am(m) - (w * au(m-1))
-      b(m)  = b(m)  - (w * b(m-1))
-    END DO
+    tdma_c(1) = (au(1) / am(1))
+    tdma_d(1) = (b(1) / am(1))
 
-    d_head(nz) = (b(nz) / am(nz))
+    DO m = 2, nz, 1
+      tdma_c(m) = (                        &
+      &  au(m)                             &
+      &  / (am(m) - (al(m) * tdma_c(m-1))) &
+      )
+      tdma_d(m) = (                        &
+      &  (b(m) - (al(m) * tdma_d(m-1)))    &
+      &  / (am(m) - (al(m) * tdma_c(m-1))) &
+      )
+    END DO
+    
+    d_head(nz) = tdma_d(nz)
 
     DO m = (nz - 1), 1, -1
-      d_head(m) = (b(m) - (au(m) * d_head(m+1))) / am(m)
+      d_head(m) = (tdma_d(m) - (tdma_c(m) * d_head(m+1)))
     END DO
   END FUNCTION solveRichardsEquation
 
@@ -1222,6 +1317,7 @@ MODULE tfm_liquid
       residuum,                &
       saturation_wc,           &
       residual_wc,             &
+      effective_wc,            &
       saturation_cond,         &
       rel_hydraulic_cond,      &
       hydraulic_cond,          &
@@ -1237,11 +1333,11 @@ MODULE tfm_liquid
     !---------------------------------------------------------------------------
 
     eff_saturation = 1.0E-3_dp
-    saturation_wc = 0.9_dp * (1.0_dp - (density / ICE_DENSITY)) + 1.0D-3
+    saturation_wc = 1.0_dp * (1.0_dp - (density / ICE_DENSITY)) + 1.0D-3
 
     WHERE ( water_content == 0.0_dp )
-      dry_layers = (                                             &
-      &  (eff_saturation * saturation_wc)                        &
+      dry_layers = (                                       &
+      &  (eff_saturation * saturation_wc)                  &
       &  / (1.0_dp - 0.75_dp + (0.75_dp * eff_saturation)) &
       )
     ELSE WHERE
@@ -1251,16 +1347,18 @@ MODULE tfm_liquid
     ! defintions
     step_tolerance = [ &
     &  0.0_dp,         &
-    &  1.0E-2_dp       &
+    &  1.0E-3_dp       &
     ]
     picard_tolerance = [            &
-    &  0.01_dp * step_tolerance(1), &
+    &  1.0D-3,                      &
+    !&  0.01_dp * step_tolerance(1), &
     &  0.01_dp * step_tolerance(2)  &
     ]
 
     backsteps = 0.0_dp
 
     n_water_content = water_content + dry_layers
+    c_water_content = n_water_content
     influx = liquid_accumulation
     outflux = -1
 
@@ -1294,7 +1392,6 @@ MODULE tfm_liquid
     &  saturation_wc=saturation_wc,       &
     &  residual_wc=residual_wc,           &
     &  saturation_cond=saturation_cond,   &
-    &  density=density,                   &
     &  vg_params=vg_params,               &
     &  dt=dt,                             &
     &  truncerr_tolerance=step_tolerance, &
@@ -1303,7 +1400,7 @@ MODULE tfm_liquid
     &  dwcdt=last_dwcdt,                  &
     &  local_dt=local_dt                  &
     )
-    local_dt = 1.0E-6_dp
+    local_dt = 1.0E-0_dp
     last_head = head
 
     ! time loop
@@ -1316,20 +1413,26 @@ MODULE tfm_liquid
       ! Picard loop
       DO WHILE ( (maxval(residuum) >= 0.0_dp) .AND. (iter < 100) )
 
+        effective_wc = vgEffectiveWC(     &
+        &  nz=nz,                         &
+        &  water_content=c_water_content, &
+        &  residual_wc=residual_wc,       &
+        &  saturation_wc=saturation_wc    &
+        )
+       
         rel_hydraulic_cond = vgRelativeHydraulicCond( &
         &  nz=nz,                                     &
-        &  head=head,                                 &
-        &  density=density,                           &
+        &  effective_wc=effective_wc,                 &
         &  vg_params=vg_params                        &
         )
         hydraulic_cond = (rel_hydraulic_cond * saturation_cond)
 
-        specific_cap = vgSpecificMoistureCapNum( &
-        &  nz=nz,                                &
-        &  head=head,                            &
-        &  residual_wc=residual_wc,              &
-        &  saturation_wc=saturation_wc,          &
-        &  vg_params=vg_params                   &
+        specific_cap = vgSpecificMoistureCap( &
+        &  nz=nz,                             &
+        &  effective_wc=effective_wc,         &
+        &  residual_wc=residual_wc,           &
+        &  saturation_wc=saturation_wc,       &
+        &  vg_params=vg_params                &
         )
 
         d_head = solveRichardsEquation(     &
@@ -1346,6 +1449,20 @@ MODULE tfm_liquid
         &  outflux=outflux                  &
         )
 
+        ! exception head
+        IF ( ( any(isnan(d_head)) ) .OR. ( any(abs(d_head) > huge(abs(d_head))) ) ) THEN
+          PRINT *, ''
+          PRINT *, '**************************************************'
+          PRINT *, '* Module: tfm_liquid                             *'
+          PRINT *, '* Function: vgRichardsAdvanceTimeStep            *'
+          PRINT *, '*                                                *'
+          PRINT *, '* The variable "d_head" shows one or more NaN or *'
+          PRINT *, '* Inifinity values! This should not be the case! *'
+          PRINT *, '* Stopping right here!                           *'
+          PRINT *, '**************************************************'
+          STOP
+        END IF
+
         head = (head + d_head)
 
         c_water_content = vgWaterContent( &
@@ -1355,20 +1472,6 @@ MODULE tfm_liquid
         &  residual_wc=residual_wc,       &
         &  vg_params=vg_params            &
         )
-
-        ! exception head
-        IF ( ( any(isnan(head)) ) .OR. ( any(abs(head) > huge(abs(head))) ) ) THEN
-          PRINT *, ''
-          PRINT *, '**************************************************'
-          PRINT *, '* Module: tfm_liquid                             *'
-          PRINT *, '* Function: vgRichardsAdvanceTimeStep            *'
-          PRINT *, '*                                                *'
-          PRINT *, '* The variable "head" shows one or more NaN or   *'
-          PRINT *, '* Inifinity values! This should not be the case! *'
-          PRINT *, '* Stopping right here!                           *'
-          PRINT *, '**************************************************'
-          STOP
-        END IF
 
         iter = (iter + 1)
         residuum = (                           &
