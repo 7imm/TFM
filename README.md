@@ -118,6 +118,7 @@ example file.
   solve_liquid="richards_equation",
   solve_van_genuchten="yamaguchi2012",
   solve_grain_growth="katsushima2009",
+  solve_permeabilty="shimizu1970",
   forcing_input_file="./example_forcing.dat",
   initial_input_file="./example_init.dat",
   time_step=86400.0,
@@ -277,6 +278,21 @@ the model defined by Katsushima et al. (2009) is employed.
 process in snowpack.*
 Cold Regions Science and Technology 59, pp. 143-151.
 DOI: https://doi.org/10.1016/j.coldregions.2009.09.002
+
+---
+
+#### `solve_permeability`
+To option `solve_permeability` determines which parameterization for the
+snow/firn permeability is used. This is neede for the compuatation of the
+hydraulic conductivity. In the given case, the parameterization of Shmizu (1970)
+is used. Other options comprise among other the model of Calonne et al. (2012).
+For full references, see
+[`docs/SimulationOptions.md`](docs/SimulationOptions.md).
+
+**Shimizu, H. (1970)**.
+*Air Permeability of Deposited Snow.*
+Contributions from the Institute of Low Temperature Sciences, A22, pp. 1-32.
+URL: https://hdl.handle.net/2115/20234 
 
 ---
 

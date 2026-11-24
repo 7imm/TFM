@@ -69,7 +69,8 @@ PROGRAM tfm_example
     solve_saturation_thermal_conductivity, &
     solve_liquid,                          &
     solve_van_genuchten,                   &
-    solve_grain_growth
+    solve_grain_growth,                    &
+    solve_permeability
 
   character(len=100) :: &
     forcing_input_file, &
@@ -108,6 +109,7 @@ PROGRAM tfm_example
   &  solve_liquid,                          &
   &  solve_van_genuchten,                   &
   &  solve_grain_growth,                    &
+  &  solve_permeability,                    &
   &  forcing_input_file,                    &
   &  initial_input_file,                    &
   &  time_step,                             &
@@ -131,6 +133,7 @@ PROGRAM tfm_example
   &  solve_liquid=trim(solve_liquid),                                                   &
   &  solve_van_genuchten=trim(solve_van_genuchten),                                     &
   &  solve_grain_growth=trim(solve_grain_growth),                                       &
+  &  solve_permeability=trim(solve_permeability),                                       &
   &  models=models                                                                      &
   )
 
@@ -159,6 +162,7 @@ PROGRAM tfm_example
   PRINT '(a,a)', 'liquid:                          ', trim(solve_liquid)
   PRINT '(a,a)', 'van Genuchten:                   ', trim(solve_van_genuchten)
   PRINT '(a,a)', 'grain growth:                    ', trim(solve_grain_growth)
+  PRINT '(a,a)', 'permeability:                    ', trim(solve_permeability)
   PRINT '(a,a)', ''
   PRINT '(a,a)', 'read forcing from:         ', trim(forcing_input_file)
   PRINT '(a,a)', 'read initial profile from: ', trim(initial_input_file)

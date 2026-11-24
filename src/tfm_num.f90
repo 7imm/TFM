@@ -28,12 +28,17 @@ MODULE tfm_num
 
   USE tfm_liquid, ONLY :         &
     van_genuchten_inter,         &
+    permeability_inter,          &
     tfm_liquid_bucket,           &
     tfm_liquid_RichardsEquation, &
     tfm_liquid_Freeze,           &
     vgParametersDaanen2009,      &
     vgParametersYamaguchi2012,   &
-    vgParametersYamaguchi2010
+    vgParametersYamaguchi2010,   &
+    permeabilityCalonne2012,     &
+    permeabilityShimizu1970,     &
+    permeabilitySelfConsistent,  &
+    permeabilityCarmanKozeny 
 
   USE tfm_temperature, ONLY :                      &
     tfm_temperature_diffusion,                     &
@@ -125,7 +130,8 @@ MODULE tfm_num
     &  water_content,        &
     &  liquid_accumulation,  &
     &  runoff,               &
-    &  van_genuchten_model   &
+    &  van_genuchten_model,  &
+    &  permeability_model    &
     )
       USE, INTRINSIC :: iso_fortran_env, ONLY: dp => real64
       IMPLICIT NONE (TYPE, EXTERNAL)
@@ -148,6 +154,9 @@ MODULE tfm_num
 
       PROCEDURE(van_genuchten_inter), POINTER :: &
         van_genuchten_model
+
+      PROCEDURE(permeability_inter), POINTER :: &
+        permeability_model
 
       REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
         water_content
@@ -370,6 +379,7 @@ MODULE tfm_num
     PROCEDURE(liquid_inter),               POINTER, NOPASS :: liquid_model           => null()
     PROCEDURE(grain_growth_inter),         POINTER, NOPASS :: grain_model            => null()
     PROCEDURE(van_genuchten_inter),        POINTER, NOPASS :: van_genuchten_model    => null()
+    PROCEDURE(permeability_inter),         POINTER, NOPASS :: permeability_model     => null()
   END TYPE sim_models
 
 
@@ -389,6 +399,7 @@ MODULE tfm_num
   &  solve_liquid,                          &
   &  solve_van_genuchten,                   &
   &  solve_grain_growth,                    &
+  &  solve_permeability,                    &
   &  models                                 &
   )
     IMPLICIT NONE (TYPE, EXTERNAL)
@@ -402,7 +413,8 @@ MODULE tfm_num
       solve_saturation_thermal_conductivity,  &
       solve_liquid,                           &
       solve_van_genuchten,                    &
-      solve_grain_growth
+      solve_grain_growth,                     &
+      solve_permeability
 
     ! pointer definition
     TYPE(sim_models), INTENT(INOUT) :: models
@@ -417,6 +429,7 @@ MODULE tfm_num
     models%sat_thermcond_model    => null()
     models%liquid_model           => null()
     models%van_genuchten_model    => null()
+    models%permeability_model     => null()
 
     IF ( present(solve_density) ) THEN
       IF ( solve_density == 'false' ) THEN
@@ -477,6 +490,34 @@ MODULE tfm_num
         models%liquid_model => null()
       ELSE IF ( solve_liquid == 'bucket' ) THEN
         models%liquid_model => tfm_liquid_bucket
+
+        IF ( present(solve_permeability) ) THEN
+          IF ( solve_permeability == "calonne2012" ) THEN
+            models%permeability_model => permeabilityCalonne2012
+          ELSE IF ( solve_permeability == "shimizu1970" ) THEN
+            models%permeability_model => permeabilityShimizu1970
+          ELSE IF ( solve_permeability == "selfConsistent" ) THEN
+            models%permeability_model => permeabilitySelfConsistent
+          ELSE IF ( solve_permeability == "carmanKozeny" ) THEN
+            models%permeability_model => permeabilityCarmanKozeny
+          ELSE
+            PRINT *, 'module tfm_num'
+            PRINT *, 'subroutine: tfm_num_modelinit'
+            PRINT *, 'can not find permeability model:', solve_permeability
+            PRINT *, 'stopping right here!'
+            STOP
+          END IF
+
+        ELSE
+          PRINT *, 'module: tfm_num'
+          PRINT *, 'subroutine: tfm_num_modelinit'
+          PRINT *, 'method "bucket" is defined for'
+          PRINT *, 'solving liquid water, but no model for the'
+          PRINT *, 'permeability is given!'
+          PRINT *, 'stopping right here!'
+          STOP
+        END IF
+
       ELSE IF ( solve_liquid == 'richards_equation' ) THEN
         models%liquid_model => tfm_liquid_RichardsEquation
 
@@ -506,9 +547,36 @@ MODULE tfm_num
         ELSE
           PRINT *, 'module: tfm_num'
           PRINT *, 'subroutine: tfm_num_modelinit'
-          PRINT *, 'methods "richards_equation" is defined for'
+          PRINT *, 'method "richards_equation" is defined for'
           PRINT *, 'solving liquid water, but no model for the'
           PRINT *, 'van Genuchten parameters is given!'
+          PRINT *, 'stopping right here!'
+          STOP
+        END IF
+
+        IF ( present(solve_permeability) ) THEN
+          IF ( solve_permeability == "calonne2012" ) THEN
+            models%permeability_model => permeabilityCalonne2012
+          ELSE IF ( solve_permeability == "shimizu1970" ) THEN
+            models%permeability_model => permeabilityShimizu1970
+          ELSE IF ( solve_permeability == "selfConsistent" ) THEN
+            models%permeability_model => permeabilitySelfConsistent
+          ELSE IF ( solve_permeability == "carmanKozeny" ) THEN
+            models%permeability_model => permeabilityCarmanKozeny
+          ELSE
+            PRINT *, 'module tfm_num'
+            PRINT *, 'subroutine: tfm_num_modelinit'
+            PRINT *, 'can not find permeability model:', solve_permeability
+            PRINT *, 'stopping right here!'
+            STOP
+          END IF
+
+        ELSE
+          PRINT *, 'module: tfm_num'
+          PRINT *, 'subroutine: tfm_num_modelinit'
+          PRINT *, 'methods "richards_equation" is defined for'
+          PRINT *, 'solving liquid water, but no model for the'
+          PRINT *, 'permeability is given!'
           PRINT *, 'stopping right here!'
           STOP
         END IF
@@ -690,18 +758,19 @@ MODULE tfm_num
     ! liquid model
     !if ( (associated(models%liquid_model)) .and. (liquid_acc > 0.0) ) then
     IF ( associated(models%liquid_model) ) THEN
-      CALL models%liquid_model(                         &
-      &  nz=nz,                                         &
-      &  dt=dt,                                         &
-      &  depth=depth,                                   &
-      &  density=density,                               &
-      &  temperature=temperature,                       &
-      &  heat_capacity=heat_capacity,                   &
-      &  grain_radius=grain_radius,                     &
-      &  water_content=liquidwater,                     &
-      &  liquid_accumulation=liquid_acc,                &
-      &  runoff=runoff,                                 &
-      &  van_genuchten_model=models%van_genuchten_model &
+      CALL models%liquid_model(                          &
+      &  nz=nz,                                          &
+      &  dt=dt,                                          &
+      &  depth=depth,                                    &
+      &  density=density,                                &
+      &  temperature=temperature,                        &
+      &  heat_capacity=heat_capacity,                    &
+      &  grain_radius=grain_radius,                      &
+      &  water_content=liquidwater,                      &
+      &  liquid_accumulation=liquid_acc,                 &
+      &  runoff=runoff,                                  &
+      &  van_genuchten_model=models%van_genuchten_model, &
+      &  permeability_model=models%permeability_model    &
       )
 
       IF ( associated(models%heatcap_model) ) THEN

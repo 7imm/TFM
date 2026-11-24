@@ -564,3 +564,51 @@ of Brun (1989) and Tusima (1978) depending on the liquid water content of firn.
 process in snowpack.*
 Cold Regions Science and Technology 59, pp. 143-151.
 DOI: https://doi.org/10.1016/j.coldregions.2009.09.002
+
+
+---
+
+## `solve_permeability`
+
+
+#### `shimizu1970`
+Permeability paramterzation following the Shimizu (1970).
+
+**Shimizu, H. (1970)**.
+*Air Permeability of Deposited Snow.*
+Contributions from the Institute of Low Temperature Sciences, A22, pp. 1-32.
+URL: https://hdl.handle.net/2115/20234
+
+
+#### `calonne2012`
+Permeability parameterzation following Calonne et al. (2012).
+
+**Calonne, N, Geindreau, C., Flin, F., Morin, S., Lesarfrre, B.,
+Rolland du Roscoat, S. and Charrier, P. (2012).**
+*3-D image based numerical comutation of snow permeability: links to specific
+surface area, density, and microstructural anisotropy.*
+The Cryosphere, 6, pp. 939-951.
+DOI: https://doi.org/10.5194/tc-6-939-2012
+
+
+#### `selfConsistent`
+Self consistent permeability model as descibed in Calonne et al. (2012).
+
+**Calonne, N, Geindreau, C., Flin, F., Morin, S., Lesarfrre, B.,
+Rolland du Roscoat, S. and Charrier, P. (2012).**
+*3-D image based numerical comutation of snow permeability: links to specific
+surface area, density, and microstructural anisotropy.*
+The Cryosphere, 6, pp. 939-951.
+DOI: https://doi.org/10.5194/tc-6-939-2012
+
+
+#### `carmanKozeny`
+Carman-Kozeny model based permeability paramterization as described in Calonne
+et al. (2012).
+
+**Calonne, N, Geindreau, C., Flin, F., Morin, S., Lesarfrre, B.,
+Rolland du Roscoat, S. and Charrier, P. (2012).**
+*3-D image based numerical comutation of snow permeability: links to specific
+surface area, density, and microstructural anisotropy.*
+The Cryosphere, 6, pp. 939-951.
+DOI: https://doi.org/10.5194/tc-6-939-2012

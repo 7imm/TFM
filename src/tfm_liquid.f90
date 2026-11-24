@@ -6,7 +6,7 @@
 !     _/\/\_       /_/    /_/      /_/  /_/
 !     /\  /\
 !
-! Copyright 2024 Timm Schultz
+! Copyright 2026 Timm Schultz
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -47,12 +47,17 @@ MODULE tfm_liquid
   !-----------------------------------------------------------------------------
   PUBLIC ::                      &
     van_genuchten_inter,         &
+    permeability_inter,          &
     tfm_liquid_richardsequation, &
     tfm_liquid_bucket,           &
     tfm_liquid_Freeze,           &
     vgParametersDaanen2009,      &
     vgParametersYamaguchi2010,   &
-    vgParametersYamaguchi2012
+    vgParametersYamaguchi2012,   &
+    permeabilityCalonne2012,     &
+    permeabilityShimizu1970,     &
+    permeabilitySelfConsistent,  &
+    permeabilityCarmanKozeny
 
   !-----------------------------------------------------------------------------
   ! types
@@ -85,6 +90,28 @@ MODULE tfm_liquid
         grain_radius
       TYPE(vanGenuchtenParameters), INTENT(INOUT) :: vg_params
     END SUBROUTINE van_genuchten_inter
+  END INTERFACE
+
+  ! interface for permeability models
+  INTERFACE
+    SUBROUTINE permeability_inter( &
+    &  nz,                         &
+    &  density,                    &
+    &  grain_radius,               &
+    &  permeability                &
+    )
+      USE, INTRINSIC :: iso_fortran_env, ONLY: dp => real64
+      IMPLICIT NONE (TYPE, EXTERNAL)
+
+      INTEGER, INTENT(IN) :: nz
+
+      REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+        density,                             &
+        grain_radius
+
+      REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+        permeability
+    END SUBROUTINE permeability_inter
   END INTERFACE
 
   !-----------------------------------------------------------------------------
@@ -403,17 +430,17 @@ MODULE tfm_liquid
   END FUNCTION vgSaturationWC
 
 
-  FUNCTION vgSaturationCondCalonne2012( &
-  &  nz,                                &
-  &  density,                           &
-  &  grain_radius                       &
-  ) RESULT(saturation_cond)
+  SUBROUTINE permeabilityCalonne2012( &
+  &  nz,                              &
+  &  density,                         &
+  &  grain_radius,                    &
+  &  permeability                     &
+  )
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
-    ! Function: vgSaturationCondCalonne2012
+    ! Subroutine: permeabilityCalonne2012 
     !
-    ! Hydraulic conductivity at saturation according to Calonne et al.
-    ! (2012).
+    ! Snow permeabiility according to Calonne et al. (2012).
     !
     ! Calonne, N., Geindreau, C., Flin, F., Morin, S., Lesaffre, B.,
     ! Rolland du Roscoat, S., and Charrier, P. (2012). 3-D image based
@@ -424,45 +451,40 @@ MODULE tfm_liquid
     ! Author: Timm Schultz
     !
     ! Arguments:
-    !   nz: Dimension of variables "density" and "grain_radius".
+    !   nz: Dimension of variables "density", "grain_radius", and
+    !       "permeability".
     !   density: Density along the firn profile (kg/m**3).
     !   grain_raius: Equivalent grain radius along the profile (m).
-    !
-    ! Result:
-    !  saturation_cond: Hydraulic conductivity at saturation (m/s).
+    !   permeability: Permeability (m**2).
     !---------------------------------------------------------------------------
-
     INTEGER, INTENT(IN) :: nz
 
     REAL(dp), DIMENSION(nz), INTENT(IN) :: &
       density,                             &
       grain_radius
 
-    REAL(dp), DIMENSION(nz) :: saturation_cond
-    REAL(dp), PARAMETER :: DYNAMIC_VISCOSITY = 0.001792_dp
+    REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+      permeability
 
     !---------------------------------------------------------------------------
-
-    saturation_cond = (                                    &
-    &  ((WATER_DENSITY * ACC_GRAVITY) / DYNAMIC_VISCOSITY) &
-    &  * (                                                 &
-    &    (3.0_dp * (grain_radius**2.0_dp))                 &
-    &    * exp(-0.013_dp * density)                        &
-    &  )                                                   &
+    permeability = (                     &
+    &  (3.0_dp * (grain_radius**2.0_dp)) &
+    &  * exp(-0.013_dp * density)        &
     )
-  END FUNCTION vgSaturationCondCalonne2012
+  END SUBROUTINE permeabilityCalonne2012
 
 
-  FUNCTION vgSaturationCondShimizu1970( &
-  &  nz,                                &
-  &  density,                           &
-  &  grain_radius                       &
-  ) RESULT(saturation_cond)
+  SUBROUTINE permeabilityShimizu1970( &
+  &  nz,                              &
+  &  density,                         &
+  &  grain_radius,                    &
+  &  permeability                     &
+  )
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
-    ! Function: vgSaturationCondShimizu1970
+    ! Subroutine: permeabilityShimizu1970
     !
-    ! Hydraulic conductivity at saturation according to Shimizu (1970).
+    ! Snow permeabiility according to Shimmizu (1970).
     !
     ! Shimizu, H. (1970). Air Permeability of Deposited Snow. Contributions
     ! from the Institute of Low Temperature Science, A22, pp. 1-32,
@@ -471,101 +493,176 @@ MODULE tfm_liquid
     ! Author: Timm Schultz
     !
     ! Arguments:
-    !   nz: Dimension of variables "density" and "grain_radius".
+    !   nz: Dimension of variables "density", "grain_radius", and
+    !       "permeability".
     !   density: Density along the firn profile (kg/m**3).
     !   grain_raius: Equivalent grain radius along the profile (m).
-    !
-    ! Result:
-    !  saturation_cond: Hydraulic conductivity at saturation (m/s).
+    !   permeability: Permeability (m**2).
     !---------------------------------------------------------------------------
-
     INTEGER, INTENT(IN) :: nz
 
-    REAL(dp), DIMENSION(nz), intent(in) :: &
-      density,                             &
-      grain_radius
-
-    REAL(dp), DIMENSION(nz) :: saturation_cond
-    REAL(dp), PARAMETER :: DYNAMIC_VISCOSITY = 0.001792_dp
-
-    !---------------------------------------------------------------------------
-
-    saturation_cond = (                                      &
-    &  0.077_dp * (grain_radius**2.0_dp)                     &
-    &  * exp(-0.0078_dp * density)                           &
-    &  * ((WATER_DENSITY * ACC_GRAVITY) / DYNAMIC_VISCOSITY) &
-    )
-  END FUNCTION vgSaturationCondShimizu1970
-
-
-  FUNCTION vgSaturationSelfConsistent( &
-  &  nz,                               &
-  &  density,                          &
-  &  grain_radius                      &
-  ) RESULT(saturation_cond)
-    IMPLICIT NONE (TYPE, EXTERNAL)
-    !---------------------------------------------------------------------------
-
-    INTEGER, INTENT(IN) :: nz
-
-    REAL(dp), DIMENSION(nz), intent(in) :: &
-      density,                             &
-      grain_radius
-
-    REAL(dp), DIMENSION(nz) :: &
-      saturation_cond,         &
-      beta
-
-    REAL(dp), PARAMETER :: DYNAMIC_VISCOSITY = 0.001792_dp
-
-    !---------------------------------------------------------------------------
-
-    beta = (1.0_dp - (1.0_dp - (density / ICE_DENSITY)))**(1.0_dp / 3.0_dp)
-
-    saturation_cond = (                                     &
-    &  (WATER_DENSITY * ACC_GRAVITY) / DYNAMIC_VISCOSITY    &
-    &  * (                                                  &
-    &    (grain_radius**2.0_dp / (3.0_dp * (beta**2.0_dp))) &
-    &    * (-1.0_dp + (                                     &
-    &      (2.0_dp + (3.0_dp * (beta**5.0_dp)))             &
-    &      / (beta * (3.0_dp + (2.0_dp * (beta**5.0_dp))))  &
-    &    ))                                                 &
-    &  )                                                    &
-    )
-  END FUNCTION vgSaturationSelfConsistent
-
-
-  FUNCTION vgSaturationCarmanKozeny( &
-  &  nz,                             &
-  &  density,                        &
-  &  grain_radius                    &
-  ) RESULT(saturation_cond)
-    IMPLICIT NONE (TYPE, EXTERNAL)
-    !---------------------------------------------------------------------------
-
-    INTEGER, INTENT(IN)                 :: nz
     REAL(dp), DIMENSION(nz), INTENT(IN) :: &
       density,                             &
       grain_radius
 
+    REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+      permeability
+
+    !---------------------------------------------------------------------------
+
+    permeability = (               &
+    &  0.077_dp                    &
+    &  * (grain_radius**2.0_dp)    &
+    &  * exp(-0.0078_dp * density) &
+    )
+  END SUBROUTINE permeabilityShimizu1970
+
+
+  SUBROUTINE permeabilitySelfConsistent( &
+  &  nz,                                 &
+  &  density,                            &
+  &  grain_radius,                       &
+  &  permeability                        &
+  )
+    IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Subroutine: permeabilitySelfConsistent
+    !
+    ! Self consistent snow permeabiility
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "density", "grain_radius", and
+    !       "permeability".
+    !   density: Density along the firn profile (kg/m**3).
+    !   grain_raius: Equivalent grain radius along the profile (m).
+    !   permeability: Permeability (m**2).
+    !---------------------------------------------------------------------------
+    INTEGER, INTENT(IN) :: nz
+
+    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+      density,                             &
+      grain_radius
+
+    REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+      permeability
+
     REAL(dp), DIMENSION(nz) :: &
-      saturation_cond,         &
+      beta
+
+    !---------------------------------------------------------------------------
+    beta = (1.0_dp - (1.0_dp - (density / ICE_DENSITY)))**(1.0_dp / 3.0_dp)
+
+    permeability = (                                      &
+    &  (grain_radius**2.0_dp / (3.0_dp * (beta**2.0_dp))) &
+    &  * (-1.0_dp + (                                     &
+    &    (2.0_dp + (3.0_dp * (beta**5.0_dp)))             &
+    &    / (beta * (3.0_dp + (2.0_dp * (beta**5.0_dp))))  &
+    &  ))                                                 &
+    )
+  END SUBROUTINE permeabilitySelfConsistent
+
+
+  SUBROUTINE permeabilityCarmanKozeny( &
+  &  nz,                                 &
+  &  density,                            &
+  &  grain_radius,                       &
+  &  permeability                        &
+  )
+    IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Subroutine: permeabilityCarmanKozeny
+    !
+    ! Snow permeabiility following a Carman-Kozeny model.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "density", "grain_radius", and
+    !       "permeability".
+    !   density: Density along the firn profile (kg/m**3).
+    !   grain_raius: Equivalent grain radius along the profile (m).
+    !   permeability: Permeability (m**2).
+    !---------------------------------------------------------------------------
+    INTEGER, INTENT(IN) :: nz
+
+    REAL(dp), DIMENSION(nz), INTENT(IN) :: &
+      density,                             &
+      grain_radius
+
+    REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
+      permeability
+
+    REAL(dp), DIMENSION(nz) :: &
       porosity
+
+    !---------------------------------------------------------------------------
+    porosity = (1.0_dp - (density / ICE_DENSITY))
+
+    permeability = (                                       &
+    &  ((4.0_dp * grain_radius**2.0) * (porosity**3.0_dp)) &
+    &  / (180.0_dp * ((1.0_dp - porosity)**2.0_dp))        &
+    )
+  END SUBROUTINE permeabilityCarmanKozeny
+
+
+  FUNCTION vgSaturationCond( &
+  &  nz,                     &
+  &  density,                &
+  &  grain_radius,           &
+  &  permeability_model      &
+  ) RESULT(saturation_cond)
+    IMPLICIT NONE (TYPE, EXTERNAL)
+    !---------------------------------------------------------------------------
+    ! Function: vgSaturationCond
+    !
+    ! Function to compute the hydraulic conductivity at saturation from the
+    ! dynamic viscosity of water and a given permeability model.
+    !
+    ! Author: Timm Schultz
+    !
+    ! Arguments:
+    !   nz: Dimension of variables "density", "grain_radius", and
+    !       "permeability".
+    !   density: Density along the firn profile (kg/m**3).
+    !   grain_raius: Equivalent grain radius along the profile (m).
+    !   permeability_model: Model used for the calculation of the permeability.
+    !
+    ! Result:
+    !   saturation_cond: Hydraulic conducitvity at water saturation (m/s).
+    !---------------------------------------------------------------------------
+    INTEGER, INTENT(IN) :: &
+      nz
+
+    REAL(KIND=dp), DIMENSION(nz), INTENT(IN) :: &
+      density,                                  &
+      grain_radius
+
+    PROCEDURE(permeability_inter), POINTER :: &
+      permeability_model
+
+    REAL(KIND=dp), DIMENSION(nz) :: &
+      saturation_cond
+
+    REAL(dp), DIMENSION(nz) :: &
+      permeability
 
     REAL(dp), PARAMETER :: DYNAMIC_VISCOSITY = 0.001792_dp
 
     !---------------------------------------------------------------------------
-
-    porosity = (1.0_dp - (density / ICE_DENSITY))
-
-    saturation_cond = (                                      &
-    &  ((WATER_DENSITY * ACC_GRAVITY) / DYNAMIC_VISCOSITY)   &
-    &  * (                                                   &
-    &    ((4.0_dp * grain_radius**2.0) * (porosity**3.0_dp)) &
-    &    / (180.0_dp * ((1.0_dp - porosity)**2.0_dp))        &
-    &  )                                                     &
+    CALL permeability_model(      &
+    &  nz=nz,                     &
+    &  density=density,           &
+    &  grain_radius=grain_radius, &
+    &  permeability=permeability  &
     )
-  END FUNCTION vgSaturationCarmanKozeny
+
+    saturation_cond = (                                    &
+    &  ((WATER_DENSITY * ACC_GRAVITY) / DYNAMIC_VISCOSITY) &
+    &  * permeability                                      &
+    )
+  END FUNCTION
 
 
   FUNCTION vgResidualWCWever2014( &
@@ -1278,7 +1375,8 @@ MODULE tfm_liquid
   &  grain_radius,                    &
   &  water_content,                   &
   &  liquid_accumulation,             &
-  &  van_genuchten_model              &
+  &  van_genuchten_model,             &
+  &  permeability_model               &
   ) RESULT(n_water_content)
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
@@ -1295,6 +1393,8 @@ MODULE tfm_liquid
     REAL(dp), INTENT(IN) :: liquid_accumulation
 
     PROCEDURE(van_genuchten_inter), POINTER :: van_genuchten_model
+
+    PROCEDURE(permeability_inter), POINTER :: permeability_model
 
     REAL(dp), DIMENSION(nz) :: n_water_content
 
@@ -1377,14 +1477,13 @@ MODULE tfm_liquid
     ! props
     residual_wc = min(0.02_dp, (0.75_dp * n_water_content), saturation_wc)
 
-    saturation_cond = vgSaturationCondShimizu1970( &
-    &  nz=nz,                                      &
-    &  density=density,                            &
-    &  grain_radius=grain_radius                   &
+    ! hydraulic conductivity at saturation
+    saturation_cond = vgSaturationCond(      &
+    &  nz=nz,                                &
+    &  density=density,                      &
+    &  grain_radius=grain_radius,            &
+    &  permeability_model=permeability_model &
     )
-    !saturation_cond = vgSaturationCondCalonne2012(nz, density, grain_radius)
-    !saturation_cond = vgSaturationSelfConsistent(nz, density, grain_radius)
-    !saturation_cond = vgSaturationCarmanKozeny(nz, density, grain_radius)
 
     CALL initKavetski2001(                &
     &  nz=nz,                             &
@@ -1521,7 +1620,8 @@ MODULE tfm_liquid
   &  water_content,                       &
   &  liquid_accumulation,                 &
   &  runoff,                              &
-  &  van_genuchten_model                  &
+  &  van_genuchten_model,                 &
+  &  permeability_model                   &
   )
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
@@ -1538,6 +1638,8 @@ MODULE tfm_liquid
     REAL(dp), INTENT(IN) :: liquid_accumulation
 
     PROCEDURE(van_genuchten_inter), POINTER :: van_genuchten_model
+
+    PROCEDURE(permeability_inter), POINTER :: permeability_model
 
     REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
       water_content
@@ -1558,7 +1660,8 @@ MODULE tfm_liquid
       &  grain_radius=grain_radius,               &
       &  water_content=water_content,             &
       &  liquid_accumulation=liquid_accumulation, &
-      &  van_genuchten_model=van_genuchten_model  &
+      &  van_genuchten_model=van_genuchten_model, &
+      &  permeability_model=permeability_model    &
       )
     END IF
   END SUBROUTINE tfm_liquid_RichardsEquation
@@ -1644,7 +1747,8 @@ MODULE tfm_liquid
   &  liquid_water,              &
   &  infiltration_rate,         &
   &  runoff,                    &
-  &  van_genuchten_model        &
+  &  van_genuchten_model,       &
+  &  permeability_model         &
   )
     IMPLICIT NONE (TYPE, EXTERNAL)
     !---------------------------------------------------------------------------
@@ -1662,6 +1766,8 @@ MODULE tfm_liquid
     REAL(dp), INTENT(IN) :: infiltration_rate
 
     PROCEDURE(van_genuchten_inter), POINTER :: van_genuchten_model
+
+    PROCEDURE(permeability_inter), POINTER :: permeability_model
 
     REAL(dp), DIMENSION(nz), INTENT(INOUT) :: &
       liquid_water
