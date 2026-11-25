@@ -997,12 +997,14 @@ MODULE tfm_num
       surf_dens,  &
       surf_temp,  &
       surf_grain, &
-      solid_acc
+      solid_acc,  &
+      liquid_acc
 
     nz         = props%depth%length
     surf_temp  = forcing(3)
     surf_dens  = forcing(4)
     solid_acc  = forcing(5)
+    liquid_acc = forcing(6)
     surf_grain = forcing(7)
 
     ! mass to be removed or added
@@ -1010,7 +1012,16 @@ MODULE tfm_num
 
     ! the accumulation is zero
     IF ( dm == 0.0_dp ) THEN
-      RETURN
+      
+      ! set temperature BC, if there is no liquid accumulation
+      IF ( liquid_acc == 0.0_dp ) THEN
+        temperature = llGetData(props%temperature)
+        temperature(props%temperature%length) = surf_temp
+        CALL llUpdateList(         &
+        &  self=props%temperature, &
+        &  data=temperature        &
+        )
+      END IF
 
     ! theres accumulation and there are still elements available
     ELSE IF ( dm > 0.0_dp ) THEN
